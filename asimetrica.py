@@ -2,6 +2,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.backends import default_backend
 import json
+from datetime import datetime  # Importar módulo para manejar fecha y hora
 
 # Archivos para guardar datos
 PRIVATE_KEY_FILE = "private_key_rsa.pem"
@@ -188,6 +189,7 @@ if __name__ == "__main__":
             # Cifrar
             credit_card_number = input("Ingrese el número de tarjeta de crédito: ")
             public_key_pem = input("Ingrese la clave pública (en formato PEM): ")
+            description = input("Ingrese una descripción para esta tarjeta: ")  # Solicitar descripción
             public_key = load_public_key_from_pem(public_key_pem)
 
             if public_key is None:
@@ -203,7 +205,13 @@ if __name__ == "__main__":
             # Guardar datos
             if "encrypted_cards" not in data:
                 data["encrypted_cards"] = []  # Crear lista si no existe
-            data["encrypted_cards"].append(encrypted_data.hex())
+
+            # Agregar tarjeta cifrada con fecha, hora y descripción
+            data["encrypted_cards"].append({
+                "encrypted_card": encrypted_data.hex(),
+                "description": description,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Fecha y hora actual
+            })
             save_data(data, DATA_FILE)
 
             # Mostrar resultados
@@ -218,8 +226,11 @@ if __name__ == "__main__":
 
             # Mostrar tarjetas cifradas disponibles
             print("\nTarjetas cifradas disponibles:")
-            for i, encrypted_card in enumerate(data["encrypted_cards"], start=1):
-                print(f"{i}. {encrypted_card.replace('a', '/').replace('b', ',')}")
+            for i, card_info in enumerate(data["encrypted_cards"], start=1):
+                if isinstance(card_info, dict):  # Verificar si el elemento es un diccionario
+                    print(f"{i}. {card_info['description']} (Fecha: {card_info['timestamp']})")
+                else:
+                    print(f"{i}. [Formato inválido en los datos guardados]")
 
             # Seleccionar tarjeta para descifrar
             try:
@@ -231,7 +242,7 @@ if __name__ == "__main__":
                 print("Entrada inválida. Intente nuevamente.")
                 continue
 
-            encrypted_data = bytes.fromhex(data["encrypted_cards"][card_index])
+            encrypted_data = bytes.fromhex(data["encrypted_cards"][card_index]["encrypted_card"])
             print("\nDatos cifrados seleccionados:", encrypted_data)
 
             print("\nSeleccione cómo cargar la clave privada:")
@@ -263,8 +274,9 @@ if __name__ == "__main__":
             # Mostrar datos guardados
             print("\nDatos guardados:")
             if "encrypted_cards" in data:
-                for i, encrypted_card in enumerate(data["encrypted_cards"], start=1):
-                    print(f"{i}. {encrypted_card.replace('a', '/').replace('b', ',')}")
+                for i, card_info in enumerate(data["encrypted_cards"], start=1):
+                    print(f"{i}. {card_info['description']} (Fecha: {card_info['timestamp']})")
+                    print(f"   Tarjeta cifrada: {card_info['encrypted_card'].replace('a', '/').replace('b', ',')}")
             else:
                 print("No hay datos disponibles.")
 
